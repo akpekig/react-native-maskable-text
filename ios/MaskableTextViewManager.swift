@@ -1,3 +1,10 @@
+//
+//  MaskableTextViewManager.swift
+//  MaskableText
+//
+//  Gabriel Duraye
+//
+
 @objc(MaskableTextViewManager)
 class MaskableTextViewManager: RCTViewManager {
 
@@ -8,29 +15,25 @@ class MaskableTextViewManager: RCTViewManager {
   @objc override static func requiresMainQueueSetup() -> Bool {
     return false
   }
+  
+  override func shadowView() -> RCTShadowView {
+    // Pass the bridge to the shadow view
+    return MaskableTextShadowView(bridge: self.bridge)
+  }
 }
 
-class MaskableTextView : UIView {
+@objc(MaskableTextChildViewManager)
+class MaskableTextChildViewManager: RCTBaseTextViewManager {
 
-  @objc var color: String = "" {
-    didSet {
-      self.backgroundColor = hexStringToUIColor(hexColor: color)
-    }
+  override func view() -> (MaskableTextChildView) {
+    return MaskableTextChildView()
   }
 
-  func hexStringToUIColor(hexColor: String) -> UIColor {
-    let stringScanner = Scanner(string: hexColor)
-
-    if(hexColor.hasPrefix("#")) {
-      stringScanner.scanLocation = 1
-    }
-    var color: UInt32 = 0
-    stringScanner.scanHexInt32(&color)
-
-    let r = CGFloat(Int(color >> 16) & 0x000000FF)
-    let g = CGFloat(Int(color >> 8) & 0x000000FF)
-    let b = CGFloat(Int(color) & 0x000000FF)
-
-    return UIColor(red: r / 255.0, green: g / 255.0, blue: b / 255.0, alpha: 1)
+  @objc override static func requiresMainQueueSetup() -> Bool {
+    return false
+  }
+  
+  override func shadowView() -> RCTShadowView {
+    return MaskableTextChildShadowView()
   }
 }

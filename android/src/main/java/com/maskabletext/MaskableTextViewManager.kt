@@ -1,20 +1,25 @@
 package com.maskabletext
 
-import android.graphics.Color
-import android.view.View
-import com.facebook.react.uimanager.SimpleViewManager
+import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ThemedReactContext
-import com.facebook.react.uimanager.annotations.ReactProp
+import com.facebook.react.views.text.ReactTextAnchorViewManager
+import com.facebook.react.views.text.ReactTextViewManager
 
-class MaskableTextViewManager : SimpleViewManager<View>() {
+class MaskableTextViewManager(reactContext: ReactApplicationContext) :
+  ReactTextAnchorViewManager<MaskableTextView, MaskableTextShadowNode>() {
+  private val mManager = ReactTextViewManager()
+
   override fun getName() = "MaskableTextView"
 
-  override fun createViewInstance(reactContext: ThemedReactContext): View {
-    return View(reactContext)
+  override fun getShadowNodeClass(): Class<out MaskableTextShadowNode> {
+    return MaskableTextShadowNode::class.java
   }
 
-  @ReactProp(name = "color")
-  fun setColor(view: View, color: String) {
-    view.setBackgroundColor(Color.parseColor(color))
+  override fun createViewInstance(context: ThemedReactContext): MaskableTextView {
+    return MaskableTextView(context)
+  }
+
+  override fun updateExtraData(view: MaskableTextView, extraData: Any?) {
+    mManager.updateExtraData(view, extraData)
   }
 }
