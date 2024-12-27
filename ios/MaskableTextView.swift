@@ -5,10 +5,8 @@
 //  Gabriel Duraye
 //
 
+/// This view is responsible for mapping props to the shadow view: `MaskableTextShadowView`
 class MaskableTextView: RCTTextView {
-  var textView: UITextView
-
-  // Props
   @objc var numberOfLines: Int = 0 {
     didSet {
       textView.textContainer.maximumNumberOfLines = numberOfLines
@@ -28,6 +26,8 @@ class MaskableTextView: RCTTextView {
   @objc var direction: NSNumber? = nil
   
   @objc var useMarkdown: Bool = false
+  
+  var textView: UITextView
 
   // Init
   override init(frame: CGRect) {
@@ -71,17 +71,17 @@ class MaskableTextView: RCTTextView {
   func setGradientColor(
     gradientColors: NSArray,
     gradientPositions: NSArray?,
-    gradientDirection: NSNumber?,
-    bounds: CGRect
+    gradientDirection: NSNumber?
   ) -> Void {
-    var glColors: [UIColor] = .init()
-    var glLocations: [NSNumber] = .init()
+    var glColors: [CGColor] = Array()
+    var glLocations: [NSNumber] = Array()
     var glDirection: CGFloat = 0
+    var glFrame: CGRect = self.textView.frame
     
     gradientColors.enumerateObjects({ object, index, stop in
       if (object is NSString),
         let color = UIColor(hex: object as! String) {
-        glColors.append(color)
+        glColors.append(color.cgColor)
       }
     })
     
@@ -97,37 +97,15 @@ class MaskableTextView: RCTTextView {
       glDirection = CGFloat(truncating: gradientDirection)
     }
     
-    let gl: CAGradientLayer = CAGradientLayer(
-      bounds: bounds,
+    let gradientLayer = CAGradientLayer(
+      frame: glFrame,
       colors: glColors,
       locations: glLocations,
       direction: glDirection
     )
     
-    let glColor = UIColor(bounds: bounds, gradientLayer: gl)
-    self.backgroundColor = glColor
-//    self.backgroundColor = glColor
-//    self.textView.textColor = glColor
-    
-//    self.textView.layer.addSublayer(gl)
-    
-//    let label = UILabel(frame: self.textView.bounds)
-//    label.textColor = glColor
-//    label.layer.addSublayer(gl)
-//    let strokeTextAttributes = [
-//            NSAttributedString.Key.strokeColor : UIColor.red,
-//          NSAttributedString.Key.foregroundColor : UIColor.clear,
-//          NSAttributedString.Key.strokeWidth : 8.0,
-//            ]
-//          as [NSAttributedString.Key : Any
-//             ]
-//
-//    label.attributedText = NSMutableAttributedString(string: self.textView.text, attributes: strokeTextAttributes)
-//
-//    self.textView.addSubview(label)
-    
-//    // This Line is the key
-//    self.textView.layer.mask = label.layer
+    let gradientColor = UIColor(bounds: glFrame, gradientLayer: gradientLayer)
+    self.textView.textColor = gradientColor
   }
 
   // This is the function called from the shadow view.

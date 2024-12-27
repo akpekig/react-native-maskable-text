@@ -1,27 +1,10 @@
 import React from 'react'
 import {StyleSheet, type TextProps, type ViewStyle} from 'react-native'
-import {MaskableTextView, MaskableTextChildView} from './index'
+import {MaskableTextView, MaskableTextChildView, type MaskableTextViewProps} from './index'
 
-export interface MaskableTextProps extends TextProps {
-  /**
-   * Array of hex color codes to be used in gradient.
-   */
-  colors?: string[];
-  /**
-   * Array of positions for each color in gradient.
-   * Must map to colors.
-   */
-  positions?: number[];
-  /**
-   * Direction of gradient in degrees. Defaults to 0.
-   */
-  direction?: number;
-  /**
-   * Text is formatted with Markdown. Requires iOS 15.
-   */
-  useMarkdown?: boolean;
-}
+export interface MaskableTextProps extends MaskableTextViewProps {}
 
+/** This context keeps track of whether the MaskableText component wraps other components or not. */
 const TextAncestorContext = React.createContext<[boolean, ViewStyle]>([
   false,
   StyleSheet.create({}),

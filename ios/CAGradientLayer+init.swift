@@ -27,24 +27,21 @@ func gradientPoints(for angle: CGFloat) -> (startPoint: CGPoint, endPoint: CGPoi
 
 extension CAGradientLayer {
   public convenience init(
-    bounds: CGRect,
-    colors: [UIColor],
+    frame: CGRect,
+    colors: [CGColor],
     locations: [NSNumber],
     direction: CGFloat
   ) {
-    let cgColors: [CGColor] = colors.map { $0.cgColor }
-    let gradient: CAGradientLayer = CAGradientLayer()
     let (startPoint, endPoint): (CGPoint, CGPoint) = gradientPoints(for: direction)
-    gradient.frame = bounds
-    gradient.colors = cgColors
     
+    self.init()
+    self.colors = colors
+    self.frame = frame
     if (!locations.isEmpty) {
-      gradient.locations = locations
+      self.locations = locations
     }
 
-    gradient.startPoint = startPoint
-    gradient.endPoint = endPoint
-    
-    self.init(layer: gradient)
+    self.startPoint = startPoint
+    self.endPoint = endPoint
   }
 }

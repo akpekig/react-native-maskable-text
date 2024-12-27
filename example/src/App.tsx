@@ -1,16 +1,11 @@
 import { StyleSheet, View } from 'react-native';
 import { MaskableText } from 'react-native-maskable-text';
-import { Text } from 'react-native';
 
 export default function App() {
   return (
     <View style={styles.container}>
-      <Text>
-        React Native Text
-      </Text>
       <MaskableText
-        style={[styles.text, {color: '#301fff'}]}
-        onPress={() => console.log("test")}>
+        style={[styles.text]}>
         Normal
       </MaskableText>
       <MaskableText
@@ -19,7 +14,7 @@ export default function App() {
         Gradient
       </MaskableText>
       <MaskableText
-        style={[styles.text, {color: '#effef1'}]}>
+        style={[styles.text]}>
         Image (TBA)
       </MaskableText>
     </View>

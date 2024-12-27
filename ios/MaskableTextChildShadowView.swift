@@ -5,9 +5,7 @@
 //  Gabriel Duraye
 //
 
-// We want all of our props to be available in the child's shadow view so we
-// can create the attributed text before mount and calculate the needed size
-// for the view.
+/// This view is responsible for holding the text and attributes of all child text views
 class MaskableTextChildShadowView: RCTShadowView {
   @objc var text: String = ""
   

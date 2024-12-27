@@ -5,6 +5,8 @@
 //  Gabriel Duraye
 //
 
+/// This view is responsible for rendering child views of the wrapping MaskableText view
+/// Its exposed properties are mapped from `MaskableTextView`
 class MaskableTextShadowView: RCTShadowView {
   @objc var numberOfLines: Int = 0
   
@@ -41,7 +43,7 @@ class MaskableTextShadowView: RCTShadowView {
     }
   }
 
-  // Tell react to not use flexbox for this view
+  // Tell React Native to not use flexbox for this view
   override func isYogaLeafNode() -> Bool {
     return true
   }
@@ -67,21 +69,20 @@ class MaskableTextShadowView: RCTShadowView {
     // Update the text
     self.bridge.uiManager.addUIBlock { [self] uiManager, viewRegistry in
       // Try to get the view
-      guard let textView = viewRegistry?[reactTag] as? MaskableTextView else {
+      guard let view = viewRegistry?[reactTag] as? MaskableTextView else {
         return
       }
       
-      textView.setText(
+      view.setText(
         string: attributedText,
         size: frameSize,
         numberOfLines: numberOfLines)
       
       if let gradientColors {
-        textView.setGradientColor(
+        view.setGradientColor(
           gradientColors: gradientColors,
           gradientPositions: gradientPositions,
-          gradientDirection: gradientDirection,
-          bounds: frameRect
+          gradientDirection: gradientDirection
         )
       }
     }
@@ -103,7 +104,7 @@ class MaskableTextShadowView: RCTShadowView {
       }
       
       var string: NSAttributedString
-      let reactAttributes = child.textAttributes.effectiveTextAttributes()
+      let reactAttributes: [NSAttributedString.Key : Any] = child.textAttributes.effectiveTextAttributes()
       
       if #available(iOS 15, *), (useMarkdown) {
         do {
@@ -113,9 +114,7 @@ class MaskableTextShadowView: RCTShadowView {
           markdownStringWithAttributes.enumerateAttributes(
             in: NSMakeRange(0, markdownStringWithAttributes.length)
           ) { attributes, range, _ in
-            let newAttributes = attributes.merging(reactAttributes) { oldValue, newValue in
-              newValue
-            }
+            let newAttributes: [NSAttributedString.Key : Any]  = attributes.merging(reactAttributes) { $1 }
             markdownStringWithAttributesCopy.addAttributes(newAttributes, range: range)
           }
           string = NSAttributedString(attributedString: markdownStringWithAttributesCopy)
