@@ -25,9 +25,25 @@ class MaskableTextView: RCTTextView {
   
   @objc var direction: NSNumber? = nil
   
+  @objc var image: RCTImageSource? = nil
+  
   @objc var useMarkdown: Bool = false
   
   var textView: UITextView
+  
+  var imageLoader: RCTImageLoader? = nil
+  
+  var imageMask: UIImage? = nil {
+    willSet {
+      if let newValue,
+        textView.text.count > 0 {
+        DispatchQueue.main.async { [self] in
+          newValue.draw(in: textView.frame)
+          textView.textColor = UIColor(patternImage: newValue)
+        }
+      }
+    }
+  }
 
   // Init
   override init(frame: CGRect) {
@@ -73,10 +89,10 @@ class MaskableTextView: RCTTextView {
     gradientPositions: NSArray?,
     gradientDirection: NSNumber?
   ) -> Void {
+    let glFrame: CGRect = textView.frame
     var glColors: [CGColor] = Array()
     var glLocations: [NSNumber] = Array()
     var glDirection: CGFloat = 0
-    var glFrame: CGRect = self.textView.frame
     
     gradientColors.enumerateObjects({ object, index, stop in
       if (object is NSString),
@@ -105,7 +121,7 @@ class MaskableTextView: RCTTextView {
     )
     
     let gradientColor = UIColor(bounds: glFrame, gradientLayer: gradientLayer)
-    self.textView.textColor = gradientColor
+    textView.textColor = gradientColor
   }
 
   // This is the function called from the shadow view.
@@ -114,23 +130,33 @@ class MaskableTextView: RCTTextView {
     size: CGSize,
     numberOfLines: Int
   ) -> Void {
-    self.textView.frame.size = size
-    self.textView.textContainer.maximumNumberOfLines = numberOfLines
-    self.textView.attributedText = string
+    textView.frame.size = size
+    textView.textContainer.maximumNumberOfLines = numberOfLines
+    textView.attributedText = string
     
     if let onTextLayout = self.onTextLayout {
       var lines: [String] = []
       textView.layoutManager.enumerateLineFragments(
         forGlyphRange: NSRange(location: 0, length: textView.attributedText.length))
-      { (rect, usedRect, textContainer, glyphRange, stop) in
-        let characterRange = self.textView.layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
-        let line = (self.textView.text as NSString).substring(with: characterRange)
+      { [self] (rect, usedRect, textContainer, glyphRange, stop) in
+        let characterRange = textView.layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
+        let line = (textView.text as NSString).substring(with: characterRange)
         lines.append(line)
       }
 
       onTextLayout([
         "lines": lines
       ])
+    }
+  }
+  
+  func setImage(_ reactImage: RCTImageSource) {
+    guard let imageLoader,
+          let image else { return }
+    DispatchQueue.main.async {
+      imageLoader.loadImage(with: image.request) { [self] error, image in
+        imageMask = image
+      }
     }
   }
 

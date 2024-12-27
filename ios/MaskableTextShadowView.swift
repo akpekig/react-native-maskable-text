@@ -18,6 +18,8 @@ class MaskableTextShadowView: RCTShadowView {
   
   @objc var gradientDirection: NSNumber? = nil
   
+  @objc var image: RCTImageSource? = nil
+  
   @objc var useMarkdown: Bool = false
   
   // For storing our created string
@@ -57,17 +59,17 @@ class MaskableTextShadowView: RCTShadowView {
 
   // Update the text when subviews change
   override func didUpdateReactSubviews() {
-    self.setAttributedText()
+    setAttributedText()
   }
 
   override func layoutSubviews(with layoutContext: RCTLayoutContext) {
     // Don't do anything if the layout is dirty
-    if(YGNodeIsDirty(self.yogaNode)) {
+    if(YGNodeIsDirty(yogaNode)) {
       return
     }
 
     // Update the text
-    self.bridge.uiManager.addUIBlock { [self] uiManager, viewRegistry in
+    bridge.uiManager.addUIBlock { [self] uiManager, viewRegistry in
       // Try to get the view
       guard let view = viewRegistry?[reactTag] as? MaskableTextView else {
         return
@@ -84,6 +86,15 @@ class MaskableTextShadowView: RCTShadowView {
           gradientPositions: gradientPositions,
           gradientDirection: gradientDirection
         )
+      }
+      
+      if let image {
+        if view.imageLoader == nil,
+           let imageLoaderModule = bridge.module(for: RCTImageLoader.self),
+           let imageLoader = imageLoaderModule as? RCTImageLoader {
+          view.imageLoader = imageLoader
+        }
+        view.setImage(image)
       }
     }
   }

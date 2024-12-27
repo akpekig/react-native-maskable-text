@@ -7,6 +7,7 @@
   RCT_REMAP_SHADOW_PROPERTY(colors, gradientColors, NSArray)
   RCT_REMAP_SHADOW_PROPERTY(positions, gradientPositions, NSArray)
   RCT_REMAP_SHADOW_PROPERTY(direction, gradientDirection,NSNumber)
+  RCT_REMAP_SHADOW_PROPERTY(image, image, RCTImageSource)
   RCT_REMAP_SHADOW_PROPERTY(useMarkdown, useMarkdown, BOOL)
 
   RCT_EXPORT_VIEW_PROPERTY(onTextLayout, RCTDirectEventBlock)
@@ -14,6 +15,7 @@
   RCT_EXPORT_VIEW_PROPERTY(colors, NSArray)
   RCT_EXPORT_VIEW_PROPERTY(positions, NSArray)
   RCT_EXPORT_VIEW_PROPERTY(direction, NSNumber)
+  RCT_EXPORT_VIEW_PROPERTY(image, RCTImageSource)
   RCT_EXPORT_VIEW_PROPERTY(useMarkdown, BOOL)
 @end
 

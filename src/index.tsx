@@ -1,8 +1,10 @@
 import {
-  requireNativeComponent,
-  UIManager,
+  type ImageRequireSource,
+  type ImageURISource,
   Platform,
+  requireNativeComponent,
   type TextProps,
+  UIManager,
 } from 'react-native';
 
 const LINKING_ERROR =
@@ -22,9 +24,15 @@ export interface MaskableTextViewProps extends TextProps {
    */
   positions?: number[];
   /**
-   * Direction of gradient in degrees. Defaults to 0
+   * Direction of gradient in degrees
+   * Defaults to 0
    */
   direction?: number;
+  /**
+   * Image to mask text
+   * Overrides gradient props
+   */
+  image?: ImageRequireSource | ImageURISource;
   /**
    * Text is formatted with Markdown
    * Requires iOS 15+

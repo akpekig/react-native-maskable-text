@@ -9,13 +9,14 @@ export default function App() {
         Normal
       </MaskableText>
       <MaskableText
-        style={[styles.text, {color: '#c00c01'}]}
-        colors={['#c00c01', '#315000']}>
+        style={[styles.text]}
+        colors={['#ffffff', '#000000']}>
         Gradient
       </MaskableText>
       <MaskableText
-        style={[styles.text]}>
-        Image (TBA)
+        style={[styles.text]}
+        image={require('./african_print.jpg')}>
+        Image
       </MaskableText>
     </View>
   );
