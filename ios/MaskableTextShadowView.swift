@@ -11,14 +11,6 @@ class MaskableTextShadowView: RCTShadowView {
   @objc var numberOfLines: Int = 0
   
   @objc var allowsFontScaling: Bool = true
-
-  @objc var gradientColors: NSArray? = nil
-  
-  @objc var gradientPositions: NSArray? = nil
-  
-  @objc var gradientDirection: NSNumber? = nil
-  
-  @objc var image: RCTImageSource? = nil
   
   @objc var useMarkdown: Bool = false
   
@@ -80,22 +72,14 @@ class MaskableTextShadowView: RCTShadowView {
         size: frameSize,
         numberOfLines: numberOfLines)
       
-      if let gradientColors {
-        view.setGradientColor(
-          gradientColors: gradientColors,
-          gradientPositions: gradientPositions,
-          gradientDirection: gradientDirection
-        )
-      }
+      view.setGradientColor()
       
-      if let image {
-        if view.imageLoader == nil,
-           let imageLoaderModule = bridge.module(for: RCTImageLoader.self),
-           let imageLoader = imageLoaderModule as? RCTImageLoader {
-          view.imageLoader = imageLoader
-        }
-        view.setImage(image)
+      if view.imageLoader == nil,
+         let imageLoaderModule = bridge.module(for: RCTImageLoader.self),
+         let imageLoader = imageLoaderModule as? RCTImageLoader {
+        view.imageLoader = imageLoader
       }
+      view.setImage()
     }
   }
 
@@ -103,6 +87,17 @@ class MaskableTextShadowView: RCTShadowView {
     super.dirtyLayout()
     // This will tell React to remeasure the view
     YGNodeMarkDirty(self.yogaNode)
+  }
+  
+  func setMaskableSubviews(_ child: MaskableTextChildShadowView) -> Void {
+    bridge.uiManager.addUIBlock { [self] uiManager, viewRegistry in
+      // Try to get the view
+      guard let view = viewRegistry?[child.reactTag] as? MaskableTextChildView else {
+        return
+      }
+      print("Padding: \(view.reactPaddingInsets)")
+      print("Border radius: \(view.reactBorderInsets)")
+    }
   }
 
   func setAttributedText() -> Void {
@@ -135,14 +130,17 @@ class MaskableTextShadowView: RCTShadowView {
       } else {
         string = NSAttributedString(string: child.text, attributes: reactAttributes)
       }
-      
+
       self.lineHeight = child.textAttributes.lineHeight
 
       finalAttributedString.append(string)
+      
+      // Set inline custom styles
+      setMaskableSubviews(child)
     }
 
-    self.attributedText = finalAttributedString
-    self.dirtyLayout()
+    attributedText = finalAttributedString
+    dirtyLayout()
   }
 
   func getNeededSize(maxWidth: Float) -> YGSize {
@@ -161,12 +159,12 @@ class MaskableTextShadowView: RCTShadowView {
     var neededSize: CGSize = textSize.size
 
     // If the total lines > max number, return size with the max
-    if self.numberOfLines != 0, totalLines > numberOfLines {
+    if numberOfLines != 0, totalLines > numberOfLines {
       neededSize = CGSize(width: CGFloat(maxWidth), height: CGFloat(CGFloat(numberOfLines) * lineHeight))
     }
 
-    self.frameSize = neededSize
-    self.frameRect = CGRect(origin: CGPoint(), size: neededSize)
+    frameSize = neededSize
+    frameRect = CGRect(origin: CGPoint(), size: neededSize)
     return YGSize(width: Float(neededSize.width), height: Float(neededSize.height))
   }
 }

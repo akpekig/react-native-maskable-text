@@ -7,7 +7,6 @@
 
 @objc(MaskableTextViewManager)
 class MaskableTextViewManager: RCTViewManager {
-
   override func view() -> (MaskableTextView) {
     return MaskableTextView()
   }
@@ -24,7 +23,6 @@ class MaskableTextViewManager: RCTViewManager {
 
 @objc(MaskableTextChildViewManager)
 class MaskableTextChildViewManager: RCTBaseTextViewManager {
-
   override func view() -> (MaskableTextChildView) {
     return MaskableTextChildView()
   }

@@ -1,8 +1,10 @@
 import React from 'react'
-import {StyleSheet, type TextProps, type ViewStyle} from 'react-native'
-import {MaskableTextView, MaskableTextChildView, type MaskableTextViewProps} from './index'
+import {processColor, StyleSheet, type TextProps, type ViewStyle} from 'react-native'
+import {MaskableTextView, MaskableTextChildView, type MaskableTextViewBaseProps} from './index'
 
-export interface MaskableTextProps extends MaskableTextViewProps {}
+export interface MaskableTextProps extends MaskableTextViewBaseProps {
+  colors?: string[]
+}
 
 /** This context keeps track of whether the MaskableText component wraps other components or not. */
 const TextAncestorContext = React.createContext<[boolean, ViewStyle]>([
@@ -15,8 +17,10 @@ const textDefaults: TextProps = {
   allowFontScaling: true,
 }
 
-export function MaskableText({style, children, ...rest}: MaskableTextProps) {
+export function MaskableText({style, children, ...props}: MaskableTextProps) {
   const [isAncestor, rootStyle] = useTextAncestorContext()
+
+  const colors = props.colors?.map(processColor).filter(color => color !== null && color !== undefined);
 
   // Flatten the styles, and apply the root styles when needed
   const flattenedStyle = React.useMemo(
@@ -29,8 +33,9 @@ export function MaskableText({style, children, ...rest}: MaskableTextProps) {
       <TextAncestorContext.Provider value={[true, flattenedStyle]}>
         <MaskableTextView
           {...textDefaults}
-          {...rest}
-          ellipsizeMode={rest.ellipsizeMode ?? rest.lineBreakMode ?? 'tail'}
+          {...props}
+          colors={colors}
+          ellipsizeMode={props.ellipsizeMode ?? props.lineBreakMode ?? 'tail'}
           style={[{flex: 1}, flattenedStyle]}
           onPress={undefined}
           onLongPress={undefined}
@@ -41,10 +46,11 @@ export function MaskableText({style, children, ...rest}: MaskableTextProps) {
             } else if (typeof c === 'string') {
               return (
                 <MaskableTextChildView
+                  {...props}
                   key={index}
+                  colors={colors}
                   style={flattenedStyle}
                   text={c}
-                  {...rest}
                 />
               )
             }
@@ -63,10 +69,11 @@ export function MaskableText({style, children, ...rest}: MaskableTextProps) {
           } else if (typeof c === 'string') {
             return (
               <MaskableTextChildView
+                {...props}
                 key={index}
+                colors={colors}
                 style={flattenedStyle}
                 text={c}
-                {...rest}
               />
             )
           }

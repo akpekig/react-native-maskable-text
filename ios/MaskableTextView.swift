@@ -19,9 +19,9 @@ class MaskableTextView: RCTTextView {
   }
   @objc var onTextLayout: RCTDirectEventBlock?
   
-  @objc var colors: NSArray? = nil
+  @objc var colors: [UIColor]? = nil
   
-  @objc var positions: NSArray? = nil
+  @objc var positions: [NSNumber]? = nil
   
   @objc var direction: NSNumber? = nil
   
@@ -35,17 +35,14 @@ class MaskableTextView: RCTTextView {
   
   var imageMask: UIImage? = nil {
     willSet {
-      if let newValue,
-        textView.text.count > 0 {
-        DispatchQueue.main.async { [self] in
-          newValue.draw(in: textView.frame)
+      DispatchQueue.main.async { [self] in
+        if let newValue {
           textView.textColor = UIColor(patternImage: newValue)
         }
       }
     }
   }
 
-  // Init
   override init(frame: CGRect) {
     // Use the appropriate TextKit version
     if #available(iOS 16.0, *) {
@@ -84,34 +81,26 @@ class MaskableTextView: RCTTextView {
   }
   
   // This function is also called from the shadow view
-  func setGradientColor(
-    gradientColors: NSArray,
-    gradientPositions: NSArray?,
-    gradientDirection: NSNumber?
-  ) -> Void {
+  func setGradientColor() -> Void {
+    guard let colors else { return }
+    
     let glFrame: CGRect = textView.frame
-    var glColors: [CGColor] = Array()
-    var glLocations: [NSNumber] = Array()
-    var glDirection: CGFloat = 0
+    let glDirection: CGFloat = CGFloat(truncating: direction ?? 0)
+    let glLocations: [NSNumber] = positions ?? []
+    let glColors: [CGColor] = colors.map { $0.cgColor }
     
-    gradientColors.enumerateObjects({ object, index, stop in
-      if (object is NSString),
-        let color = UIColor(hex: object as! String) {
-        glColors.append(color.cgColor)
-      }
-    })
+//    colors.enumerateObjects({ object, index, stop in
+//      if (object is NSString),
+//        let color = UIColor(hex: object as! String) {
+//        glColors.append(color.cgColor)
+//      }
+//    })
     
-    if let gradientPositions {
-      gradientPositions.enumerateObjects({ object, index, stop in
-        if (object is NSNumber) {
-          glLocations.append(object as! NSNumber)
-        }
-      })
-    }
-    
-    if let gradientDirection {
-      glDirection = CGFloat(truncating: gradientDirection)
-    }
+//    positions?.enumerateObjects({ object, index, stop in
+//      if (object is NSNumber) {
+//        glLocations.append(object as! NSNumber)
+//      }
+//    })
     
     let gradientLayer = CAGradientLayer(
       frame: glFrame,
@@ -150,12 +139,12 @@ class MaskableTextView: RCTTextView {
     }
   }
   
-  func setImage(_ reactImage: RCTImageSource) {
+  func setImage() {
     guard let imageLoader,
           let image else { return }
     DispatchQueue.main.async {
-      imageLoader.loadImage(with: image.request) { [self] error, image in
-        imageMask = image
+      imageLoader.loadImage(with: image.request) { [self] error, reactImage in
+        imageMask = reactImage
       }
     }
   }

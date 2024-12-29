@@ -2,6 +2,7 @@ import {
   type ImageRequireSource,
   type ImageURISource,
   Platform,
+  type ProcessedColorValue,
   requireNativeComponent,
   type TextProps,
   UIManager,
@@ -13,11 +14,7 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
-export interface MaskableTextViewProps extends TextProps {
-  /**
-   * Array of hex color codes to be used in gradient
-   */
-  colors?: string[];
+export interface MaskableTextViewBaseProps extends TextProps {
   /**
    * Array of positions for each color in gradient
    * Indices must map to @param colors
@@ -38,6 +35,13 @@ export interface MaskableTextViewProps extends TextProps {
    * Requires iOS 15+
    */
   useMarkdown?: boolean;
+}
+
+export interface MaskableTextViewProps extends MaskableTextViewBaseProps {
+  /**
+   * Array of hex color codes to be used in gradient
+   */
+  colors?: ProcessedColorValue[];
 }
 
 export interface MaskableTextChildViewProps extends MaskableTextViewProps {
