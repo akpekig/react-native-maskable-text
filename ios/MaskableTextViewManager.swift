@@ -32,6 +32,6 @@ class MaskableTextChildViewManager: RCTBaseTextViewManager {
   }
   
   override func shadowView() -> RCTShadowView {
-    return MaskableTextChildShadowView()
+    return MaskableTextChildShadowView(bridge: self.bridge)
   }
 }

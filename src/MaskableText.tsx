@@ -72,6 +72,8 @@ export function MaskableText({style, children, ...props}: MaskableTextProps) {
                 {...props}
                 key={index}
                 colors={colors}
+                useGradient={!!colors && !props.image}
+                useImage={!!props.image}
                 style={flattenedStyle}
                 text={c}
               />

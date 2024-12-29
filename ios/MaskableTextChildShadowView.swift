@@ -11,18 +11,35 @@ class MaskableTextChildShadowView: RCTShadowView {
   
   @objc var textAttributes: RCTTextAttributes = .init()
   
-  @objc var gradientColors: NSArray? = nil
+  @objc var useGradient: Bool = false
   
-  @objc var gradientPositions: NSArray? = nil
-  
-  @objc var gradientDirection: NSNumber? = nil
+  @objc var useImage: Bool = false
   
   @objc var useMarkdown: Bool = false
+  
+  var processedAttributedString: NSAttributedString = .init() {
+    willSet {
+      bridge.uiManager.addUIBlock { [self] uiManager, viewRegistry in
+        guard let view = viewRegistry?[self.reactTag] as? MaskableTextChildView else {
+          return
+        }
+        
+        view.processedAttributedString = newValue
+      }
+    }
+  }
+  
+  var bridge: RCTBridge
+
+  init(bridge: RCTBridge) {
+    self.bridge = bridge
+    super.init()
+  }
   
   override func isYogaLeafNode() -> Bool {
     return true
   }
-
+  
   override func didSetProps(_ changedProps: [String]!) {
     if let superview = self.superview as? MaskableTextShadowView,
        !YGNodeIsDirty(superview.yogaNode) {

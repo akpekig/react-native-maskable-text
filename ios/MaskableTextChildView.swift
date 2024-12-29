@@ -6,16 +6,12 @@
 //
 
 /// This view is a proxy to bridge `MaskableTextChildShadowView` to React Native
-class MaskableTextChildView: UIView {
+class MaskableTextChildView: MaskableTextBaseView {
   @objc var text: String? = nil
   
-  // NSArray<UIColor>
-  @objc var colors: NSArray? = nil
+  @objc var useGradient: Bool = false
   
-  // NSArray<NSNumber>
-  @objc var positions: NSArray? = nil
+  @objc var useImage: Bool = false
   
-  @objc var direction: NSNumber? = nil
-  
-  @objc var useMarkdown: Bool = false
+  var processedAttributedString: NSAttributedString = .init()
 }

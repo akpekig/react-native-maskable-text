@@ -6,7 +6,7 @@
 //
 
 /// This view is responsible for mapping props to the shadow view: `MaskableTextShadowView`
-class MaskableTextView: RCTTextView {
+class MaskableTextView: MaskableTextBaseView {
   @objc var numberOfLines: Int = 0 {
     didSet {
       textView.textContainer.maximumNumberOfLines = numberOfLines
@@ -18,16 +18,6 @@ class MaskableTextView: RCTTextView {
     }
   }
   @objc var onTextLayout: RCTDirectEventBlock?
-  
-  @objc var colors: [UIColor]? = nil
-  
-  @objc var positions: [NSNumber]? = nil
-  
-  @objc var direction: NSNumber? = nil
-  
-  @objc var image: RCTImageSource? = nil
-  
-  @objc var useMarkdown: Bool = false
   
   var textView: UITextView
   
@@ -80,27 +70,14 @@ class MaskableTextView: RCTTextView {
     }
   }
   
-  // This function is also called from the shadow view
+  /// Called from the shadow view to set the gradient color on all child text nodes
   func setGradientColor() -> Void {
     guard let colors else { return }
-    
+  
     let glFrame: CGRect = textView.frame
     let glDirection: CGFloat = CGFloat(truncating: direction ?? 0)
     let glLocations: [NSNumber] = positions ?? []
     let glColors: [CGColor] = colors.map { $0.cgColor }
-    
-//    colors.enumerateObjects({ object, index, stop in
-//      if (object is NSString),
-//        let color = UIColor(hex: object as! String) {
-//        glColors.append(color.cgColor)
-//      }
-//    })
-    
-//    positions?.enumerateObjects({ object, index, stop in
-//      if (object is NSNumber) {
-//        glLocations.append(object as! NSNumber)
-//      }
-//    })
     
     let gradientLayer = CAGradientLayer(
       frame: glFrame,
@@ -112,8 +89,72 @@ class MaskableTextView: RCTTextView {
     let gradientColor = UIColor(bounds: glFrame, gradientLayer: gradientLayer)
     textView.textColor = gradientColor
   }
+  
+  /// Called from the shadow view to set the gradient color on specific child text nodes
+  func setInlineGradientColor() {
+    guard let children: [UIView] = self.reactSubviews() else { return }
+    var currentOffset: CGRect = .init()
+    children.forEach({
+      guard let child = $0 as? MaskableTextChildView else { return }
+      textView.attributedText.enumerateAttribute(
+        NSAttributedString.Key.useGradient,
+        in: NSMakeRange(0, textView.attributedText.string.count)) { attribute, range, stop in
+          guard attribute is Bool else {
+            currentOffset = textView
+              .attributedText
+              .attributedSubstring(from: range)
+              .boundingRect(
+                with: textView.textContainer.size,
+                options: NSStringDrawingOptions.usesLineFragmentOrigin,
+                context: nil)
+              .offsetBy(
+                dx: textView.textContainerInset.left,
+                dy: textView.textContainerInset.top)
+            
+            return
+          }
+          
+          var glColors: [CGColor]
+          
+          if let childColors = child.colors {
+            glColors = childColors.map { $0.cgColor }
+          } else if let colors {
+            glColors = colors.map { $0.cgColor }
+          } else {
+            return
+          }
+          
+          DispatchQueue.main.async { [self] in
+            let childFrame: CGRect = textView
+              .attributedText
+              .attributedSubstring(from: range)
+              .boundingRect(
+                with: textView.textContainer.size,
+                options: NSStringDrawingOptions.usesLineFragmentOrigin,
+                context: nil)
+              .offsetBy(
+                dx: currentOffset.width + currentOffset.origin.x,
+                dy: textView.textContainerInset.top)
+            
+            let glLocations: [NSNumber] = child.positions ?? positions ?? []
+            let glDirection = CGFloat(truncating: child.direction ?? direction ?? 0)
+            let gl = CAGradientLayer(
+              frame: childFrame,
+              colors: glColors,
+              locations: glLocations,
+              direction: glDirection)
+            let glMask = UITextView(frame: textView.frame, textContainer: textView.textContainer)
+            
+            glMask.attributedText = textView.attributedText
+            gl.mask = glMask.layer
+            
+            textView.layer.addSublayer(gl)
+          }
+      }
+    })
+  }
 
-  // This is the function called from the shadow view.
+  /// Called from the shadow view to match the size in React Native
   func setText(
     string: NSAttributedString,
     size: CGSize,
@@ -139,6 +180,7 @@ class MaskableTextView: RCTTextView {
     }
   }
   
+  /// Called from the shadow view to set the image on all child text nodes
   func setImage() {
     guard let imageLoader,
           let image else { return }

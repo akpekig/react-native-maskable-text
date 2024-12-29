@@ -12,8 +12,6 @@ class MaskableTextShadowView: RCTShadowView {
   
   @objc var allowsFontScaling: Bool = true
   
-  @objc var useMarkdown: Bool = false
-  
   // For storing our created string
   var attributedText: NSAttributedString = .init()
   // For storing the frame size when we first calculate it
@@ -63,7 +61,7 @@ class MaskableTextShadowView: RCTShadowView {
     // Update the text
     bridge.uiManager.addUIBlock { [self] uiManager, viewRegistry in
       // Try to get the view
-      guard let view = viewRegistry?[reactTag] as? MaskableTextView else {
+      guard let view = viewRegistry?[self.reactTag] as? MaskableTextView else {
         return
       }
       
@@ -73,6 +71,8 @@ class MaskableTextShadowView: RCTShadowView {
         numberOfLines: numberOfLines)
       
       view.setGradientColor()
+      
+      view.setInlineGradientColor()
       
       if view.imageLoader == nil,
          let imageLoaderModule = bridge.module(for: RCTImageLoader.self),
@@ -88,17 +88,6 @@ class MaskableTextShadowView: RCTShadowView {
     // This will tell React to remeasure the view
     YGNodeMarkDirty(self.yogaNode)
   }
-  
-  func setMaskableSubviews(_ child: MaskableTextChildShadowView) -> Void {
-    bridge.uiManager.addUIBlock { [self] uiManager, viewRegistry in
-      // Try to get the view
-      guard let view = viewRegistry?[child.reactTag] as? MaskableTextChildView else {
-        return
-      }
-      print("Padding: \(view.reactPaddingInsets)")
-      print("Border radius: \(view.reactBorderInsets)")
-    }
-  }
 
   func setAttributedText() -> Void {
     // Create an attributed string to store each of the segments
@@ -110,9 +99,17 @@ class MaskableTextShadowView: RCTShadowView {
       }
       
       var string: NSAttributedString
-      let reactAttributes: [NSAttributedString.Key : Any] = child.textAttributes.effectiveTextAttributes()
+      var reactAttributes: [NSAttributedString.Key : Any] = child.textAttributes.effectiveTextAttributes()
       
-      if #available(iOS 15, *), (useMarkdown) {
+      if (child.useGradient) {
+        reactAttributes.updateValue(child.useGradient, forKey: NSAttributedString.Key.useGradient)
+      }
+      
+      if (child.useImage) {
+        reactAttributes.updateValue(child.useImage, forKey: NSAttributedString.Key.useImage)
+      }
+      
+      if #available(iOS 15, *), (child.useMarkdown) {
         do {
           let markdownString = try NSAttributedString(markdown: child.text)
           let markdownStringWithAttributes = NSMutableAttributedString(attributedString: markdownString)
@@ -133,10 +130,8 @@ class MaskableTextShadowView: RCTShadowView {
 
       self.lineHeight = child.textAttributes.lineHeight
 
+      child.processedAttributedString = string
       finalAttributedString.append(string)
-      
-      // Set inline custom styles
-      setMaskableSubviews(child)
     }
 
     attributedText = finalAttributedString

@@ -50,6 +50,16 @@ export interface MaskableTextChildViewProps extends MaskableTextViewProps {
    * This is because React Native makes it hell to pass string text as a child
    */
   text: string;
+  /** 
+   * @internal
+   * Passes whether to use gradient on inline text
+   */
+  useGradient?: boolean;
+  /** 
+   * @internal
+   * Passes whether to use image on inline text
+   */
+  useImage?: boolean;
 }
 
 /** This component bridges to the shadow view for the wrapping Text view */
