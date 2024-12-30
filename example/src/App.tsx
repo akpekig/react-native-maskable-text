@@ -10,7 +10,7 @@ export default function App() {
       </MaskableText>
       <MaskableText
         style={styles.text}
-        colors={['#ffffff', '#000000']}>
+        gradientColors={['#ffffff', '#000000']}>
         Gradient
       </MaskableText>
       <MaskableText
@@ -21,8 +21,8 @@ export default function App() {
       <MaskableText
         style={styles.textSmall}>
       Inline <MaskableText
-        style={styles.textSmall}
-        colors={['#ffffff', '#000000']}>Gradient</MaskableText>
+        style={[styles.textSmall, { color: '#ff8fab' }]}
+        gradientColors={['#ffffff', '#000000']}>Gradient that wraps</MaskableText>
       </MaskableText>
       <MaskableText
         style={styles.textSmall}>
@@ -52,6 +52,8 @@ const styles = StyleSheet.create({
     flex: 0,
     fontSize: 30,
     fontWeight: '700',
+    textDecorationColor: '#ff8fab',
+    textDecorationLine: 'underline'
   },
   textWithRoundedBackground: {
     padding: 10,
