@@ -19,29 +19,25 @@ export interface MaskableTextViewBaseProps extends TextProps {
    * Array of positions for each color in gradient
    * Indices must map to @param colors
    */
-  positions?: number[];
+  gradientPositions?: number[];
   /**
    * Direction of gradient in degrees
    * Defaults to 0
    */
-  direction?: number;
+  gradientDirection?: number;
   /**
    * Image to mask text
    * Overrides gradient props
    */
   image?: ImageRequireSource | ImageURISource;
-  /**
-   * Text is formatted with Markdown
-   * Requires iOS 15+
-   */
-  useMarkdown?: boolean;
 }
 
 export interface MaskableTextViewProps extends MaskableTextViewBaseProps {
   /**
-   * Array of hex color codes to be used in gradient
+   * @internal
+   * Array of processed color values to be used in gradient
    */
-  colors?: ProcessedColorValue[];
+  gradientColors?: ProcessedColorValue[];
 }
 
 export interface MaskableTextChildViewProps extends MaskableTextViewProps {
@@ -60,6 +56,11 @@ export interface MaskableTextChildViewProps extends MaskableTextViewProps {
    * Passes whether to use image on inline text
    */
   useImage?: boolean;
+  /**
+   * Text is formatted with Markdown
+   * Requires iOS 15+
+   */
+  useMarkdown?: boolean;
 }
 
 /** This component bridges to the shadow view for the wrapping Text view */

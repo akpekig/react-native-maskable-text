@@ -5,15 +5,13 @@
 //  Gabriel Duraye
 //
 
-/// Inherited by `MaskableTextChildView` and `MaskableTextView`
-open class MaskableTextBaseView: RCTTextView {
-  @objc var colors: [UIColor]? = nil
+/// Inherited by `MaskableTextView`, `MaskableTextShadowView` and `MaskableTextChildShadowView`
+@objc protocol MaskableTextBaseView {
+  @objc var gradientColors: [UIColor]? { get set }
   
-  @objc var positions: [NSNumber]? = nil
+  @objc var gradientPositions: [NSNumber]? { get set }
   
-  @objc var direction: NSNumber? = nil
+  @objc var gradientDirection: NSNumber? { get set }
   
-  @objc var image: RCTImageSource? = nil
-  
-  @objc var useMarkdown: Bool = false
+  @objc var image: RCTImageSource? { get set }
 }

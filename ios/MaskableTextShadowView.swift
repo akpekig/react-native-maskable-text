@@ -7,10 +7,18 @@
 
 /// This view is responsible for rendering child views of the wrapping MaskableText view
 /// Its exposed properties are mapped from `MaskableTextView`
-class MaskableTextShadowView: RCTShadowView {
+class MaskableTextShadowView: RCTShadowView, MaskableTextBaseView {
   @objc var numberOfLines: Int = 0
   
   @objc var allowsFontScaling: Bool = true
+  
+  @objc var gradientColors: [UIColor]?
+  
+  @objc var gradientPositions: [NSNumber]?
+  
+  @objc var gradientDirection: NSNumber?
+  
+  @objc var image: RCTImageSource?
   
   // For storing our created string
   var attributedText: NSAttributedString = .init()
@@ -64,15 +72,13 @@ class MaskableTextShadowView: RCTShadowView {
       guard let view = viewRegistry?[self.reactTag] as? MaskableTextView else {
         return
       }
-      
+          
       view.setText(
         string: attributedText,
         size: frameSize,
         numberOfLines: numberOfLines)
       
       view.setGradientColor()
-      
-      view.setInlineGradientColor()
       
       if view.imageLoader == nil,
          let imageLoaderModule = bridge.module(for: RCTImageLoader.self),
@@ -93,20 +99,28 @@ class MaskableTextShadowView: RCTShadowView {
     // Create an attributed string to store each of the segments
     let finalAttributedString = NSMutableAttributedString()
     
-    self.reactSubviews().forEach { [self] child in
-      guard let child = child as? MaskableTextChildShadowView else {
+    self.reactSubviews().forEach { [weak self] subview in
+      guard let self,
+            let child = subview as? MaskableTextChildShadowView else {
         return
       }
-      
-      var string: NSAttributedString
+    
       var reactAttributes: [NSAttributedString.Key : Any] = child.textAttributes.effectiveTextAttributes()
+      var string = NSMutableAttributedString(string: child.text, attributes: reactAttributes)
       
       if (child.useGradient) {
-        reactAttributes.updateValue(child.useGradient, forKey: NSAttributedString.Key.useGradient)
+        let inlineGradient = InlineGradient(
+          colors: child.gradientColors ?? gradientColors,
+          direction: child.gradientDirection ?? gradientDirection,
+          positions: child.gradientPositions ?? gradientPositions)
+        
+        let gradientAttribute = [NSAttributedString.Key.foregroundGradient : inlineGradient]
+        let range = NSRange(location: 0, length: child.text.count)
+        string.addAttributes(gradientAttribute, range: range)
       }
       
       if (child.useImage) {
-        reactAttributes.updateValue(child.useImage, forKey: NSAttributedString.Key.useImage)
+        reactAttributes.updateValue(child.image as Any, forKey: NSAttributedString.Key.foregroundImage)
       }
       
       if #available(iOS 15, *), (child.useMarkdown) {
@@ -115,22 +129,19 @@ class MaskableTextShadowView: RCTShadowView {
           let markdownStringWithAttributes = NSMutableAttributedString(attributedString: markdownString)
           let markdownStringWithAttributesCopy = NSMutableAttributedString(attributedString: markdownString)
           markdownStringWithAttributes.enumerateAttributes(
-            in: NSMakeRange(0, markdownStringWithAttributes.length)
+            in: NSRange(0..<markdownStringWithAttributesCopy.length)
           ) { attributes, range, _ in
             let newAttributes: [NSAttributedString.Key : Any]  = attributes.merging(reactAttributes) { $1 }
             markdownStringWithAttributesCopy.addAttributes(newAttributes, range: range)
           }
-          string = NSAttributedString(attributedString: markdownStringWithAttributesCopy)
+          string = NSMutableAttributedString(attributedString: markdownStringWithAttributesCopy)
         } catch {
-          string = NSAttributedString(string: child.text, attributes: reactAttributes)
+          // NOOP
         }
-      } else {
-        string = NSAttributedString(string: child.text, attributes: reactAttributes)
       }
 
       self.lineHeight = child.textAttributes.lineHeight
 
-      child.processedAttributedString = string
       finalAttributedString.append(string)
     }
 

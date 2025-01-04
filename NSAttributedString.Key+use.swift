@@ -6,6 +6,6 @@
 //
 
 extension NSAttributedString.Key {
-  static let useGradient = NSAttributedString.Key("useGradient")
-  static let useImage = NSAttributedString.Key("useImage")
+  static let foregroundGradient = NSAttributedString.Key("foregroundGradient")
+  static let foregroundImage = NSAttributedString.Key("foregroundImage")
 }

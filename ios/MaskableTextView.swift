@@ -6,18 +6,36 @@
 //
 
 /// This view is responsible for mapping props to the shadow view: `MaskableTextShadowView`
-class MaskableTextView: MaskableTextBaseView {
+class MaskableTextView: RCTTextView, MaskableTextBaseView {
   @objc var numberOfLines: Int = 0 {
     didSet {
-      textView.textContainer.maximumNumberOfLines = numberOfLines
+      DispatchQueue.main.async { [weak self] in
+        if let self {
+          textView.textContainer.maximumNumberOfLines = numberOfLines
+        }
+      }
     }
   }
   @objc var ellipsizeMode: String = "tail" {
     didSet {
-      textView.textContainer.lineBreakMode = self.getLineBreakMode()
+      DispatchQueue.main.async { [weak self] in
+        if let self {
+          textView.textContainer.lineBreakMode = self.getLineBreakMode()
+        }
+      }
     }
   }
   @objc var onTextLayout: RCTDirectEventBlock?
+  
+  @objc var gradientColors: [UIColor]?
+  
+  @objc var gradientPositions: [NSNumber]?
+  
+  @objc var gradientDirection: NSNumber?
+  
+  @objc var image: RCTImageSource?
+  
+  var layoutManager: MaskableTextLayoutManager
   
   var textView: UITextView
   
@@ -25,8 +43,9 @@ class MaskableTextView: MaskableTextBaseView {
   
   var imageMask: UIImage? = nil {
     willSet {
-      DispatchQueue.main.async { [self] in
-        if let newValue {
+      DispatchQueue.main.async { [weak self] in
+        if let self,
+           let newValue {
           textView.textColor = UIColor(patternImage: newValue)
         }
       }
@@ -40,6 +59,12 @@ class MaskableTextView: MaskableTextBaseView {
     } else {
       textView = UITextView()
     }
+    
+    // Add subclassed layout manager
+    layoutManager = MaskableTextLayoutManager()
+    layoutManager.textStorage = textView.textStorage
+    layoutManager.addTextContainer(textView.textContainer)
+    textView.textContainer.replaceLayoutManager(layoutManager)
 
     // Disable scrolling
     textView.isScrollEnabled = false
@@ -72,86 +97,25 @@ class MaskableTextView: MaskableTextBaseView {
   
   /// Called from the shadow view to set the gradient color on all child text nodes
   func setGradientColor() -> Void {
-    guard let colors else { return }
-  
-    let glFrame: CGRect = textView.frame
-    let glDirection: CGFloat = CGFloat(truncating: direction ?? 0)
-    let glLocations: [NSNumber] = positions ?? []
-    let glColors: [CGColor] = colors.map { $0.cgColor }
+    DispatchQueue.main.async { [weak self] in
+      guard let self,
+            let gradientColors else { return }
     
-    let gradientLayer = CAGradientLayer(
-      frame: glFrame,
-      colors: glColors,
-      locations: glLocations,
-      direction: glDirection
-    )
-    
-    let gradientColor = UIColor(bounds: glFrame, gradientLayer: gradientLayer)
-    textView.textColor = gradientColor
-  }
-  
-  /// Called from the shadow view to set the gradient color on specific child text nodes
-  func setInlineGradientColor() {
-    guard let children: [UIView] = self.reactSubviews() else { return }
-    var currentOffset: CGRect = .init()
-    children.forEach({
-      guard let child = $0 as? MaskableTextChildView else { return }
-      textView.attributedText.enumerateAttribute(
-        NSAttributedString.Key.useGradient,
-        in: NSMakeRange(0, textView.attributedText.string.count)) { attribute, range, stop in
-          guard attribute is Bool else {
-            currentOffset = textView
-              .attributedText
-              .attributedSubstring(from: range)
-              .boundingRect(
-                with: textView.textContainer.size,
-                options: NSStringDrawingOptions.usesLineFragmentOrigin,
-                context: nil)
-              .offsetBy(
-                dx: textView.textContainerInset.left,
-                dy: textView.textContainerInset.top)
-            
-            return
-          }
-          
-          var glColors: [CGColor]
-          
-          if let childColors = child.colors {
-            glColors = childColors.map { $0.cgColor }
-          } else if let colors {
-            glColors = colors.map { $0.cgColor }
-          } else {
-            return
-          }
-          
-          DispatchQueue.main.async { [self] in
-            let childFrame: CGRect = textView
-              .attributedText
-              .attributedSubstring(from: range)
-              .boundingRect(
-                with: textView.textContainer.size,
-                options: NSStringDrawingOptions.usesLineFragmentOrigin,
-                context: nil)
-              .offsetBy(
-                dx: currentOffset.width + currentOffset.origin.x,
-                dy: textView.textContainerInset.top)
-            
-            let glLocations: [NSNumber] = child.positions ?? positions ?? []
-            let glDirection = CGFloat(truncating: child.direction ?? direction ?? 0)
-            let gl = CAGradientLayer(
-              frame: childFrame,
-              colors: glColors,
-              locations: glLocations,
-              direction: glDirection)
-            let glMask = UITextView(frame: textView.frame, textContainer: textView.textContainer)
-            
-            glMask.attributedText = textView.attributedText
-            gl.mask = glMask.layer
-            
-            textView.layer.addSublayer(gl)
-          }
-      }
-    })
+      let glFrame: CGRect = textView.frame
+      let glDirection: CGFloat = CGFloat(truncating: gradientDirection ?? 0)
+      let glLocations: [NSNumber] = gradientPositions ?? []
+      let glColors: [CGColor] = gradientColors.map { $0.cgColor }
+      
+      let gl = CAGradientLayer(
+        frame: glFrame,
+        colors: glColors,
+        locations: glLocations,
+        direction: glDirection
+      )
+      
+      let gradientColor = UIColor(gl, bounds: glFrame)
+      textView.textColor = gradientColor
+    }
   }
 
   /// Called from the shadow view to match the size in React Native
@@ -160,23 +124,30 @@ class MaskableTextView: MaskableTextBaseView {
     size: CGSize,
     numberOfLines: Int
   ) -> Void {
-    textView.frame.size = size
-    textView.textContainer.maximumNumberOfLines = numberOfLines
-    textView.attributedText = string
-    
-    if let onTextLayout = self.onTextLayout {
-      var lines: [String] = []
-      textView.layoutManager.enumerateLineFragments(
-        forGlyphRange: NSRange(location: 0, length: textView.attributedText.length))
-      { [self] (rect, usedRect, textContainer, glyphRange, stop) in
-        let characterRange = textView.layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
-        let line = (textView.text as NSString).substring(with: characterRange)
-        lines.append(line)
-      }
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      
+      textView.frame.size = size
+      textView.textContainer.maximumNumberOfLines = numberOfLines
+      textView.attributedText = string
+      
+      // Redraws string to render inline masked text
+      layoutManager.drawGlyphs(forGlyphRange: NSRange(location: 0, length: textView.attributedText.length), at: textView.frame.origin)
+      
+      if let onTextLayout = self.onTextLayout {
+        var lines: [String] = []
+        layoutManager.enumerateLineFragments(
+          forGlyphRange: NSRange(location: 0, length: textView.attributedText.length))
+        { (rect, usedRect, textContainer, glyphRange, stop) in
+          let characterRange = self.layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
+          let line = (self.textView.text as NSString).substring(with: characterRange)
+          lines.append(line)
+        }
 
-      onTextLayout([
-        "lines": lines
-      ])
+        onTextLayout([
+          "lines": lines
+        ])
+      }
     }
   }
   
@@ -184,7 +155,7 @@ class MaskableTextView: MaskableTextBaseView {
   func setImage() {
     guard let imageLoader,
           let image else { return }
-    DispatchQueue.main.async {
+    DispatchQueue.global(qos: DispatchQoS.QoSClass.utility).async {
       imageLoader.loadImage(with: image.request) { [self] error, reactImage in
         imageMask = reactImage
       }

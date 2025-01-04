@@ -3,7 +3,15 @@ import {processColor, StyleSheet, type TextProps, type ViewStyle} from 'react-na
 import {MaskableTextView, MaskableTextChildView, type MaskableTextViewBaseProps} from './index'
 
 export interface MaskableTextProps extends MaskableTextViewBaseProps {
-  colors?: string[]
+  /**
+   * Array of hex color codes to be used in gradient
+   */
+  gradientColors?: string[];
+  /**
+   * Text is formatted with Markdown
+   * Requires iOS 15+
+   */
+  useMarkdown?: boolean;
 }
 
 /** This context keeps track of whether the MaskableText component wraps other components or not. */
@@ -17,10 +25,10 @@ const textDefaults: TextProps = {
   allowFontScaling: true,
 }
 
-export function MaskableText({style, children, ...props}: MaskableTextProps) {
+export function MaskableText({style, children, useMarkdown, ...props}: MaskableTextProps) {
   const [isAncestor, rootStyle] = useTextAncestorContext()
 
-  const colors = props.colors?.map(processColor).filter(color => color !== null && color !== undefined);
+  const gradientColors = props.gradientColors?.map(processColor).filter(color => color !== null && color !== undefined);
 
   // Flatten the styles, and apply the root styles when needed
   const flattenedStyle = React.useMemo(
@@ -34,7 +42,7 @@ export function MaskableText({style, children, ...props}: MaskableTextProps) {
         <MaskableTextView
           {...textDefaults}
           {...props}
-          colors={colors}
+          gradientColors={gradientColors}
           ellipsizeMode={props.ellipsizeMode ?? props.lineBreakMode ?? 'tail'}
           style={[{flex: 1}, flattenedStyle]}
           onPress={undefined}
@@ -48,7 +56,8 @@ export function MaskableText({style, children, ...props}: MaskableTextProps) {
                 <MaskableTextChildView
                   {...props}
                   key={index}
-                  colors={colors}
+                  gradientColors={gradientColors}
+                  useMarkdown={useMarkdown}
                   style={flattenedStyle}
                   text={c}
                 />
@@ -71,9 +80,10 @@ export function MaskableText({style, children, ...props}: MaskableTextProps) {
               <MaskableTextChildView
                 {...props}
                 key={index}
-                colors={colors}
-                useGradient={!!colors && !props.image}
+                gradientColors={gradientColors}
+                useGradient={!!gradientColors && !props.image}
                 useImage={!!props.image}
+                useMarkdown={useMarkdown}
                 style={flattenedStyle}
                 text={c}
               />
