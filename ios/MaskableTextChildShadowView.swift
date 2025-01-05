@@ -9,7 +9,7 @@
 class MaskableTextChildShadowView: RCTShadowView, MaskableTextBaseView {
   @objc var text: String = ""
   
-  @objc var textAttributes: RCTTextAttributes = .init()
+  @objc var textAttributes: MaskableTextAttributes = .init()
   
   @objc var gradientColors: [UIColor]?
   
@@ -24,6 +24,8 @@ class MaskableTextChildShadowView: RCTShadowView, MaskableTextBaseView {
   @objc var useImage: Bool = false
   
   @objc var useMarkdown: Bool = false
+  
+  @objc var borderRadius: YGValue = YGValue()
   
   override func isYogaLeafNode() -> Bool {
     return true

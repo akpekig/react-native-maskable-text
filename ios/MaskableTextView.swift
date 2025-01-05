@@ -45,7 +45,9 @@ class MaskableTextView: RCTTextView, MaskableTextBaseView {
     willSet {
       DispatchQueue.main.async { [weak self] in
         if let self,
-           let newValue {
+           let newValue,
+           newValue.size.width > 0.0,
+           newValue.size.height > 0.0 {
           textView.textColor = UIColor(patternImage: newValue)
         }
       }
@@ -53,35 +55,43 @@ class MaskableTextView: RCTTextView, MaskableTextBaseView {
   }
 
   override init(frame: CGRect) {
-    // Use the appropriate TextKit version
-    if #available(iOS 16.0, *) {
-      textView = UITextView(usingTextLayoutManager: false)
-    } else {
-      textView = UITextView()
-    }
-    
     // Add subclassed layout manager
+    let textStorage = NSTextStorage()
+    let textContainer = NSTextContainer(size: frame.size)
+    textContainer.lineFragmentPadding = 0
+    textContainer.widthTracksTextView = true
+    textContainer.heightTracksTextView = true
     layoutManager = MaskableTextLayoutManager()
-    layoutManager.textStorage = textView.textStorage
-    layoutManager.addTextContainer(textView.textContainer)
-    textView.textContainer.replaceLayoutManager(layoutManager)
-
+    layoutManager.textStorage = textStorage
+    layoutManager.addTextContainer(textContainer)
+    textContainer.replaceLayoutManager(layoutManager)
+    textView = UITextView(frame: frame, textContainer: textContainer)
+    
     // Disable scrolling
     textView.isScrollEnabled = false
     // Remove all the padding
     textView.textContainerInset = .zero
-    textView.textContainer.lineFragmentPadding = 0
 
     // Remove other properties
     textView.isEditable = false
     textView.backgroundColor = .clear
+    textView.clipsToBounds = true
 
     // Init
     super.init(frame: frame)
+    layoutManager.scaleFactor = self.contentScaleFactor
+    textContainer.size = self.reactContentFrame.size
+    textContainer.lineBreakMode = self.getLineBreakMode()
+    textView.frame = self.reactContentFrame
     self.clipsToBounds = true
 
     // Add the view
     addSubview(textView)
+    
+    // Add gestures for onPress
+    let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(callOnPress(_:)))
+    tapGestureRecognizer.isEnabled = true
+    textView.addGestureRecognizer(tapGestureRecognizer)
   }
 
   required init?(coder: NSCoder) {
@@ -95,25 +105,77 @@ class MaskableTextView: RCTTextView, MaskableTextBaseView {
     }
   }
   
+  /// Redraws string to render inline masked text
+  override func draw(_ rect: CGRect) {
+    super.draw(rect)
+    layoutManager.ensureLayout(for: textView.textContainer)
+    let glyphRange = layoutManager.glyphRange(for: textView.textContainer)
+    let textRect = layoutManager.usedRect(for: textView.textContainer)
+    layoutManager.drawGlyphs(forGlyphRange: glyphRange, at: textRect.origin)
+    
+    // Pass TextLayoutEvent object to onTextLayout callback
+    if let onTextLayout {
+      let string = textView.textStorage.string as NSString
+      var payload: [String : Any] = [:]
+      var lines: [[String : Any]] = []
+      layoutManager.enumerateLineFragments(
+        forGlyphRange: NSRange(location: 0, length: string.length))
+      { (rect, usedRect, textContainer, glyphRange, stop) in
+        let characterRange: NSRange = self.layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
+        let renderedString: NSString = string.substring(with: characterRange) as NSString
+        
+        var line: [String : Any] = [
+          "text" : renderedString,
+          "x" : usedRect.origin.x,
+          "y" : usedRect.origin.y,
+          "width" : usedRect.size.width,
+          "height" : usedRect.size.height,
+          "descender" : 0.0,
+          "capHeight" : 0.0,
+          "ascender" : 0.0,
+          "xHeight" : 0.0
+        ]
+        
+        if let font: UIFont = self.textView.textStorage.attributedSubstring(from: characterRange).attribute(NSAttributedString.Key.font, at: 0, effectiveRange: nil) as? UIFont {
+          let fontDict: [String : Any] = [
+            "descender": -font.descender,
+            "capHeight": font.capHeight,
+            "ascender" : font.ascender,
+            "xHeight": font.xHeight
+          ]
+          
+          line.merge(fontDict) { $1 }
+        }
+
+        lines.append(line)
+      }
+      
+      payload.updateValue(lines, forKey: "lines")
+      
+      if let reactTag = self.reactTag {
+        payload.updateValue(reactTag, forKey: "target")
+      }
+
+      onTextLayout(payload)
+    }
+  }
+  
   /// Called from the shadow view to set the gradient color on all child text nodes
   func setGradientColor() -> Void {
     DispatchQueue.main.async { [weak self] in
       guard let self,
             let gradientColors else { return }
-    
-      let glFrame: CGRect = textView.frame
-      let glDirection: CGFloat = CGFloat(truncating: gradientDirection ?? 0)
-      let glLocations: [NSNumber] = gradientPositions ?? []
+
       let glColors: [CGColor] = gradientColors.map { $0.cgColor }
       
       let gl = CAGradientLayer(
-        frame: glFrame,
+        bounds: textView.bounds,
         colors: glColors,
-        locations: glLocations,
-        direction: glDirection
+        locations: gradientPositions ?? [],
+        direction: CGFloat(truncating: gradientDirection ?? 0)
       )
       
-      let gradientColor = UIColor(gl, bounds: glFrame)
+      let gradientColor = UIColor(from: gl, in: textView.bounds)
       textView.textColor = gradientColor
     }
   }
@@ -130,24 +192,8 @@ class MaskableTextView: RCTTextView, MaskableTextBaseView {
       textView.frame.size = size
       textView.textContainer.maximumNumberOfLines = numberOfLines
       textView.attributedText = string
-      
-      // Redraws string to render inline masked text
-      layoutManager.drawGlyphs(forGlyphRange: NSRange(location: 0, length: textView.attributedText.length), at: textView.frame.origin)
-      
-      if let onTextLayout = self.onTextLayout {
-        var lines: [String] = []
-        layoutManager.enumerateLineFragments(
-          forGlyphRange: NSRange(location: 0, length: textView.attributedText.length))
-        { (rect, usedRect, textContainer, glyphRange, stop) in
-          let characterRange = self.layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
-          let line = (self.textView.text as NSString).substring(with: characterRange)
-          lines.append(line)
-        }
 
-        onTextLayout([
-          "lines": lines
-        ])
-      }
+      setNeedsDisplay()
     }
   }
   
@@ -155,11 +201,55 @@ class MaskableTextView: RCTTextView, MaskableTextBaseView {
   func setImage() {
     guard let imageLoader,
           let image else { return }
-    DispatchQueue.global(qos: DispatchQoS.QoSClass.utility).async {
+    DispatchQueue.global(qos: DispatchQoS.QoSClass.userInteractive).async {
       imageLoader.loadImage(with: image.request) { [self] error, reactImage in
         imageMask = reactImage
       }
     }
+  }
+  
+  @IBAction func callOnPress(_ sender: UITapGestureRecognizer) -> Void {
+    // If we find a child, then call onPress
+    if let child = getPressed(sender) {
+      if textView.selectedTextRange == nil, let onPress = child.onPress {
+        onPress(["": ""])
+      } else {
+        // Clear the selected text range if we are not pressing on a link
+        textView.selectedTextRange = nil
+      }
+    }
+  }
+
+  // Try to get the pressed segment
+  func getPressed(_ sender: UITapGestureRecognizer) -> MaskableTextChildView? {
+    let layoutManager = textView.layoutManager
+    var location = sender.location(in: textView)
+
+    // Remove the padding
+    location.x -= textView.textContainerInset.left
+    location.y -= textView.textContainerInset.top
+
+    // Get the index of the char
+    let charIndex = layoutManager.characterIndex(
+      for: location,
+      in: textView.textContainer,
+      fractionOfDistanceBetweenInsertionPoints: nil
+    )
+
+    for child in self.reactSubviews() {
+      if let child = child as? MaskableTextChildView {
+        let fullText = self.textView.attributedText.string
+        let range = fullText.range(of: child.text)
+
+        if let lowerBound = range?.lowerBound, let upperBound = range?.upperBound {
+          if charIndex >= lowerBound.utf16Offset(in: fullText) && charIndex <= upperBound.utf16Offset(in: fullText) {
+            return child
+          }
+        }
+      }
+    }
+
+    return nil
   }
 
   func getLineBreakMode() -> NSLineBreakMode {

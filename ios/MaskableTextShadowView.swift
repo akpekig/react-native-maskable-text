@@ -18,6 +18,7 @@ class MaskableTextShadowView: RCTShadowView, MaskableTextBaseView {
   
   @objc var gradientDirection: NSNumber?
   
+  // For `MaskableTextBaseView` conformance
   @objc var image: RCTImageSource?
   
   // For storing our created string
@@ -28,11 +29,16 @@ class MaskableTextShadowView: RCTShadowView, MaskableTextBaseView {
   var frameRect: CGRect = .init()
   // For storing the line height when we create the styles
   var lineHeight: CGFloat = 0
+  // For loading inline text clipping images
+  var imageLoader: RCTImageLoader? = nil
   
   var bridge: RCTBridge
 
   init(bridge: RCTBridge) {
     self.bridge = bridge
+    if let imageLoader = bridge.module(for: RCTImageLoader.self) as? RCTImageLoader {
+      self.imageLoader = imageLoader
+    }
     super.init()
 
     // We need to set a custom measure func here to calculate the height correctly
@@ -69,7 +75,7 @@ class MaskableTextShadowView: RCTShadowView, MaskableTextBaseView {
     // Update the text
     bridge.uiManager.addUIBlock { [self] uiManager, viewRegistry in
       // Try to get the view
-      guard let view = viewRegistry?[self.reactTag] as? MaskableTextView else {
+      guard let view: MaskableTextView = viewRegistry?[self.reactTag] as? MaskableTextView else {
         return
       }
           
@@ -80,11 +86,6 @@ class MaskableTextShadowView: RCTShadowView, MaskableTextBaseView {
       
       view.setGradientColor()
       
-      if view.imageLoader == nil,
-         let imageLoaderModule = bridge.module(for: RCTImageLoader.self),
-         let imageLoader = imageLoaderModule as? RCTImageLoader {
-        view.imageLoader = imageLoader
-      }
       view.setImage()
     }
   }
@@ -105,42 +106,36 @@ class MaskableTextShadowView: RCTShadowView, MaskableTextBaseView {
         return
       }
     
-      var reactAttributes: [NSAttributedString.Key : Any] = child.textAttributes.effectiveTextAttributes()
+      let reactAttributes: [NSAttributedString.Key : Any] = child.textAttributes.effectiveTextAttributes()
       var string = NSMutableAttributedString(string: child.text, attributes: reactAttributes)
       
-      if (child.useGradient) {
-        let inlineGradient = InlineGradient(
+      if child.useGradient {
+        string.addAttributes([NSAttributedString.Key.foregroundGradient : InlineGradient(
           colors: child.gradientColors ?? gradientColors,
           direction: child.gradientDirection ?? gradientDirection,
-          positions: child.gradientPositions ?? gradientPositions)
-        
-        let gradientAttribute = [NSAttributedString.Key.foregroundGradient : inlineGradient]
-        let range = NSRange(location: 0, length: child.text.count)
-        string.addAttributes(gradientAttribute, range: range)
+          positions: child.gradientPositions ?? gradientPositions)], range: NSRange(location: 0, length: child.text.count))
       }
       
-      if (child.useImage) {
-        reactAttributes.updateValue(child.image as Any, forKey: NSAttributedString.Key.foregroundImage)
+      if child.useImage,
+        let childImageSource = child.image,
+        let imageLoader = self.imageLoader {
+        string.addAttributes([NSAttributedString.Key.foregroundImage : InlineImage(source: childImageSource, imageLoader: imageLoader)], range: NSRange(location: 0, length: child.text.count))
       }
       
       if #available(iOS 15, *), (child.useMarkdown) {
         do {
-          let markdownString = try NSAttributedString(markdown: child.text)
-          let markdownStringWithAttributes = NSMutableAttributedString(attributedString: markdownString)
-          let markdownStringWithAttributesCopy = NSMutableAttributedString(attributedString: markdownString)
-          markdownStringWithAttributes.enumerateAttributes(
-            in: NSRange(0..<markdownStringWithAttributesCopy.length)
-          ) { attributes, range, _ in
-            let newAttributes: [NSAttributedString.Key : Any]  = attributes.merging(reactAttributes) { $1 }
-            markdownStringWithAttributesCopy.addAttributes(newAttributes, range: range)
-          }
-          string = NSMutableAttributedString(attributedString: markdownStringWithAttributesCopy)
+          string = try NSMutableAttributedString(markdown: child.text)
+          string.addAttributes(reactAttributes, range: NSRange(location: 0, length: child.text.count))
         } catch {
           // NOOP
         }
       }
-
-      self.lineHeight = child.textAttributes.lineHeight
+      
+      if let paragraphStyle = child.textAttributes.effectiveParagraphStyle() {
+        self.lineHeight = paragraphStyle.maximumLineHeight
+      } else {
+        self.lineHeight = child.textAttributes.lineHeight
+      }
 
       finalAttributedString.append(string)
     }

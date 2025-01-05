@@ -81,8 +81,8 @@ export function MaskableText({style, children, useMarkdown, ...props}: MaskableT
                 {...props}
                 key={index}
                 gradientColors={gradientColors}
-                useGradient={!!gradientColors && !props.image}
-                useImage={!!props.image}
+                useGradient={!!gradientColors && !props.image && !useMarkdown}
+                useImage={!!props.image && !useMarkdown}
                 useMarkdown={useMarkdown}
                 style={flattenedStyle}
                 text={c}

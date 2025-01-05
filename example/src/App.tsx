@@ -21,7 +21,8 @@ export default function App() {
       <MaskableText
         style={styles.textSmall}>
       Inline <MaskableText
-        gradientColors={['#ffffff', '#000000']}>Gradient</MaskableText>
+        style={[styles.textSmall]}
+        gradientColors={['#c00c01', '#000000']}>Gradient</MaskableText>
       </MaskableText>
       <MaskableText
         style={styles.textSmall}>

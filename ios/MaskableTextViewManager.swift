@@ -8,7 +8,13 @@
 @objc(MaskableTextViewManager)
 class MaskableTextViewManager: RCTViewManager {
   override func view() -> (MaskableTextView) {
-    return MaskableTextView()
+    let view = MaskableTextView()
+    
+    // Pass image to view for image loading
+    if let imageLoader = bridge.module(for: RCTImageLoader.self) as? RCTImageLoader {
+      view.imageLoader = imageLoader
+    }
+    return view
   }
 
   @objc override static func requiresMainQueueSetup() -> Bool {

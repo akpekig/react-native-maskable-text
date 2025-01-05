@@ -18,7 +18,11 @@
 @end
 
 @interface RCT_EXTERN_MODULE(MaskableTextChildViewManager, RCTBaseTextViewManager)
-  RCT_EXPORT_SHADOW_PROPERTY(text, NSString)
+  RCT_REMAP_SHADOW_PROPERTY(padding, textAttributes.padding, YGValue)
+  RCT_REMAP_SHADOW_PROPERTY(borderRadius, textAttributes.borderRadius, YGValue)
+
+  RCT_REMAP_SHADOW_PROPERTY(text, text, NSString)
+
   RCT_EXPORT_SHADOW_PROPERTY(gradientColors, NSArray<UIColor>)
   RCT_EXPORT_SHADOW_PROPERTY(gradientPositions, NSArray<NSNumber>)
   RCT_EXPORT_SHADOW_PROPERTY(gradientDirection, NSNumber)
@@ -26,4 +30,7 @@
   RCT_EXPORT_SHADOW_PROPERTY(useGradient, BOOL)
   RCT_EXPORT_SHADOW_PROPERTY(useImage, BOOL)
   RCT_EXPORT_SHADOW_PROPERTY(useMarkdown, BOOL)
+
+  RCT_EXPORT_VIEW_PROPERTY(text, NSString)
+  RCT_EXPORT_VIEW_PROPERTY(onPress, RCTBubblingEventBlock)
 @end
